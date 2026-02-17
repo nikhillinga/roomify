@@ -2,7 +2,7 @@ import { Box } from "lucide-react"
 import Button from "./ui/Button";
 
 const Navbar = () => {
-    const isSignedIn = true;
+    const isSignedIn = false;
     const username = 'nikhil'
     const handleAuthClick = async () => {};
   return (
