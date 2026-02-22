@@ -18,6 +18,9 @@ export default function Home() {
   const handleUploadComplete = async (base64Image: string) => {
     const newId = Date.now().toString();
 
+    // Persist base64 image to localStorage using newId as key
+    localStorage.setItem(`roomify_image_${newId}`, base64Image);
+
     navigate(`/visualizer/${newId}`);
 
     return true;
