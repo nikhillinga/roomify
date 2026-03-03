@@ -7,7 +7,7 @@ type HostedAsset = { url: string };
 export const getOrCreateHostingConfig = async (): Promise<HostingConfig | null> => {
     const existing = (await puter.kv.get(HOSTING_CONFIG_KEY)) as HostingConfig | null;
 
-    if(existing?.subdomain) return {subdomain: existing.subdomain };
+    if (existing?.subdomain) return { subdomain: existing.subdomain };
 
     const subdomain = createHostingSlug();
 
@@ -25,24 +25,25 @@ export const getOrCreateHostingConfig = async (): Promise<HostingConfig | null> 
         }
 
         return record;
-    }catch(e){
+    } catch (e) {
         console.warn(`Could not find subdomain: ${e}`);
         return null;
     }
 }
 
 export const uploadImageToHosting = async ({ hosting, url, projectId, label }:
-StoreHostedImageParams): Promise<HostedAsset | null> => {
-    if(!hosting || !url) return null;
-    if(isHostedUrl(url)) return { url };
+    StoreHostedImageParams): Promise<HostedAsset | null> => {
+    if (!hosting || !url) return null;
+    if (isHostedUrl(url)) return { url };
 
-    try{
-        const resolved = label === "rendered" 
-            ? await imageUrlToPngBlob(url).then((blob) => blob ? { blob, contentType:
-                'image/png'
-            }: null)
+    try {
+        const resolved = label === "rendered"
+            ? await imageUrlToPngBlob(url).then((blob) => blob ? {
+                blob, contentType:
+                    'image/png'
+            } : null)
             : await fetchBlobFromUrl(url);
-        if(!resolved) return null;
+        if (!resolved) return null;
 
         const contentType = resolved.contentType || resolved.blob.type || '';
         const ext = getImageExtension(contentType, url);
@@ -53,11 +54,9 @@ StoreHostedImageParams): Promise<HostedAsset | null> => {
             throw new Error(`Invalid projectId for hosting: ${projectId}`);
         }
 
-        // use path.join for safe path construction
-        // Node's path module is available in the environment where puter.fs runs
-        const path = await import('path');
-        const dir = path.posix.join('projects', projectId);
-        const filePath = path.posix.join(dir, `${label}.${ext}`);
+        // Use simple string concatenation for POSIX paths (runs in browser, not Node)
+        const dir = `projects/${projectId}`;
+        const filePath = `${dir}/${label}.${ext}`;
 
         const uploadFile = new File([resolved.blob], `${label}.${ext}`, {
             type: contentType,
@@ -68,8 +67,8 @@ StoreHostedImageParams): Promise<HostedAsset | null> => {
 
         const hostedUrl = getHostedUrl({ subdomain: hosting.subdomain }, filePath);
 
-        return hostedUrl ? { url: hostedUrl }: null;
-    }catch(e){
+        return hostedUrl ? { url: hostedUrl } : null;
+    } catch (e) {
         console.warn(`Failed to store hosted image: ${e}`);
         return null;
     }
