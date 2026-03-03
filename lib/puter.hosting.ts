@@ -15,7 +15,14 @@ export const getOrCreateHostingConfig = async (): Promise<HostingConfig | null> 
         const created = await puter.hosting.create(subdomain, '.');
 
         const record = { subdomain: created.subdomain };
-        await puter.kv.set(HOSTING_CONFIG_KEY, record);
+
+        // persist for future calls
+        try {
+            await puter.kv.set(HOSTING_CONFIG_KEY, record);
+        } catch (writeErr) {
+            console.warn(`Failed to persist hosting config: ${writeErr}`);
+            // still return the record to allow usage
+        }
 
         return record;
     }catch(e){
@@ -39,9 +46,19 @@ StoreHostedImageParams): Promise<HostedAsset | null> => {
 
         const contentType = resolved.contentType || resolved.blob.type || '';
         const ext = getImageExtension(contentType, url);
-        const safeProjectId = projectId.replace(/[^a-zA-Z0-9_-]/g, "_");
-        const dir = `projects/${safeProjectId}`;
-        const filePath = `${dir}/${label}.${ext}`;
+
+        // sanitize projectId to prevent path traversal
+        const idPattern = /^[A-Za-z0-9._-]+$/;
+        if (!idPattern.test(projectId)) {
+            throw new Error(`Invalid projectId for hosting: ${projectId}`);
+        }
+
+        // use path.join for safe path construction
+        // Node's path module is available in the environment where puter.fs runs
+        const path = await import('path');
+        const dir = path.posix.join('projects', projectId);
+        const filePath = path.posix.join(dir, `${label}.${ext}`);
+
         const uploadFile = new File([resolved.blob], `${label}.${ext}`, {
             type: contentType,
         });

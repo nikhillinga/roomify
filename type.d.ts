@@ -109,11 +109,11 @@ type ShareStatus = "idle" | "saving" | "done";
 type HostingConfig = { subdomain: string };
 type HostedAsset = { url: string };
 
-interface StoreHostedImageParams {
-    hosting: HostingConfig | null;
+export interface StoreHostedImageParams {
+    hosting: { subdomain: string } | null;
     url: string;
     projectId: string;
-    label: "source" | "rendered";
+    label: string;
 }
 
 interface CreateProjectParams {
@@ -125,3 +125,6 @@ interface Generate3DViewParams {
     sourceImage: string;
     projectId?: string | null;
 }
+
+// ensure the file is treated as a module
+export {};

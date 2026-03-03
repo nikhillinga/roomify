@@ -7,7 +7,11 @@ const Navbar = () => {
     const handleAuthClick = async () => {
         if (isSignedIn) {
             try {
-                await signOut();
+                const ok = await signOut();
+                if (!ok) {
+                    console.error('Puter sign out returned false');
+                    alert('Logout was not successful.');
+                }
             } catch (e) {
                 console.error(`Puter sign out failed: ${e}`);
                 alert('Logout failed, see console for details.');
