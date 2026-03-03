@@ -4,6 +4,9 @@ import type { Route } from "./+types/home";
 import Button from "components/ui/Button";
 import Upload from "../../components/Upload";
 import { useNavigate } from "react-router";
+import { useState } from "react";
+import * as puterAction from "../../lib/puter.action";
+
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -14,14 +17,38 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Home() {
   const navigate = useNavigate();
-
+  const [projects, setProjects] = useState<DesignItem[]>([]);
   const handleUploadComplete = async (base64Image: string) => {
     const newId = Date.now().toString();
+    const name = `Residence ${newId}`;
 
-    // Persist base64 image to localStorage using newId as key
-    localStorage.setItem(`roomify_image_${newId}`, base64Image);
+    const newItem = {
+      id: newId, name, sourceImage: base64Image, renderedImage: undefined,
+      timestamp: Date.now()
+    }
 
-    navigate(`/visualizer/${newId}`);
+    let saved: DesignItem | null = null;
+    try {
+      saved = await puterAction.createProject({ item: newItem, visibility: "private" });
+    } catch (e) {
+      console.error(`Failed to create project: ${e}`);
+      return false;
+    }
+
+    if (!saved) {
+      console.error("Failed to create project");
+      return false;
+    }
+
+    setProjects((prev) => [newItem, ...prev]);
+
+    navigate(`/visualizer/${newId}`, {
+      state: {
+        initialImage: saved.sourceImage,
+        initialRendered: saved.renderedImage || null,
+        name
+      }
+    });
 
     return true;
   }
@@ -75,32 +102,35 @@ export default function Home() {
           </div>
 
           <div className="projects-grid">
-            <div className="project-card group">
-              <div className="preview">
-                <img src="https://roomify-mlhuk267-dfwu1i.puter.site/projects/1770803585402/rendered.png" 
-                  alt="Project"
-                />
+            {projects.map(({ id, name, renderedImage, sourceImage, timestamp }) => (
+              <div key={id} className="project-card group">
+                <div className="preview">
+                  <img
+                    src={renderedImage || sourceImage}
+                    alt="Project"
+                  />
 
-                <div className="badge">
-                  <span>Community</span>
-                </div>
-              </div>
-
-              <div className="card-body">
-                <div>
-                  <h3>Urban House</h3>
-                  <div className="meta">
-                    <Clock size={12} />
-                    <span>{new Date('01.01.2026').toLocaleDateString()}</span>
-                    <span>By Vivek Vattem</span>
+                  <div className="badge">
+                    <span>Community</span>
                   </div>
                 </div>
 
-                <div className="arrow">
-                  <ArrowUpRight size={18} />
+                <div className="card-body">
+                  <div>
+                    <h3>{name}</h3>
+                    <div className="meta">
+                      <Clock size={12} />
+                      <span>{new Date(timestamp).toLocaleDateString()}</span>
+                      <span>By Vivek Vattem</span>
+                    </div>
+                  </div>
+
+                  <div className="arrow">
+                    <ArrowUpRight size={18} />
+                  </div>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>

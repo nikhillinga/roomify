@@ -55,8 +55,8 @@ export default function App() {
 
       setAuthState({
         isSignedIn: !!user,
-        username: user ?.username ||null,
-        userId: user?.uuid||null,
+        userName: user ?.username || null,
+        userId: user?.uuid || null,
       });
 
       return !!user;
@@ -66,31 +66,33 @@ export default function App() {
     }
   }
 
+  // only refresh once on mount; avoid infinite loop
   useEffect(() => {
     refreshAuth();
-  })
+  }, []);
 
   const signIn = async() => {
     await puterSignIn();
     return await refreshAuth();
   }
 
-  const signOut = async() => {
-    puterSignOut();
+  const signOut = async () => {
+    // ensure sign out completes before refreshing
+    await puterSignOut();
     return await refreshAuth();
-  }
+  };
   return (
     <main className="min-h-screen bg-background text-foreground relative z-10">
-      <Outlet 
+      <Outlet
         context={{ ...authState, refreshAuth, signIn, signOut }}
-      />;
+      />
     </main>
   )
 }
 
 const DEFAULT_AUTH_STATE: AuthState ={
   isSignedIn: false,
-  username: null,
+  userName: null,
   userId: null,
 }
 
