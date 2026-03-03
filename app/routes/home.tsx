@@ -27,10 +27,16 @@ export default function Home() {
       timestamp: Date.now()
     }
 
-    const saved = await puterAction.createProject({ item: newItem, visibility: 'private' });
+    let saved: DesignItem | null = null;
+    try {
+      saved = await puterAction.createProject({ item: newItem, visibility: "private" });
+    } catch (e) {
+      console.error(`Failed to create project: ${e}`);
+      return false;
+    }
 
-    if(!saved) {
-      console.error("Failed to create Project");
+    if (!saved) {
+      console.error("Failed to create project");
       return false;
     }
 
