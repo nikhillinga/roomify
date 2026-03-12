@@ -27,16 +27,10 @@ export default function Home() {
       timestamp: Date.now()
     }
 
-    let saved: DesignItem | null = null;
-    try {
-      saved = await puterAction.createProject({ item: newItem, visibility: "private" });
-    } catch (e) {
-      console.error(`Failed to create project: ${e}`);
-      return false;
-    }
+    const saved = await puterAction.createProject({ item: newItem, visibility: 'private' });
 
-    if (!saved) {
-      console.error("Failed to create project");
+    if(!saved) {
+      console.error("Failed to create Project");
       return false;
     }
 
@@ -45,7 +39,7 @@ export default function Home() {
     navigate(`/visualizer/${newId}`, {
       state: {
         initialImage: saved.sourceImage,
-        initialRendered: saved.renderedImage || null,
+        initialRender: saved.renderedImage || null,
         name
       }
     });

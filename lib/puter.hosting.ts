@@ -7,7 +7,7 @@ type HostedAsset = { url: string };
 export const getOrCreateHostingConfig = async (): Promise<HostingConfig | null> => {
     const existing = (await puter.kv.get(HOSTING_CONFIG_KEY)) as HostingConfig | null;
 
-    if(existing?.subdomain) return {subdomain: existing.subdomain };
+    if (existing?.subdomain) return { subdomain: existing.subdomain };
 
     const subdomain = createHostingSlug();
 
@@ -15,33 +15,49 @@ export const getOrCreateHostingConfig = async (): Promise<HostingConfig | null> 
         const created = await puter.hosting.create(subdomain, '.');
 
         const record = { subdomain: created.subdomain };
-        await puter.kv.set(HOSTING_CONFIG_KEY, record);
+
+        // persist for future calls
+        try {
+            await puter.kv.set(HOSTING_CONFIG_KEY, record);
+        } catch (writeErr) {
+            console.warn(`Failed to persist hosting config: ${writeErr}`);
+            // still return the record to allow usage
+        }
 
         return record;
-    }catch(e){
+    } catch (e) {
         console.warn(`Could not find subdomain: ${e}`);
         return null;
     }
 }
 
 export const uploadImageToHosting = async ({ hosting, url, projectId, label }:
-StoreHostedImageParams): Promise<HostedAsset | null> => {
-    if(!hosting || !url) return null;
-    if(isHostedUrl(url)) return { url };
+    StoreHostedImageParams): Promise<HostedAsset | null> => {
+    if (!hosting || !url) return null;
+    if (isHostedUrl(url)) return { url };
 
-    try{
-        const resolved = label === "rendered" 
-            ? await imageUrlToPngBlob(url).then((blob) => blob ? { blob, contentType:
-                'image/png'
-            }: null)
+    try {
+        const resolved = label === "rendered"
+            ? await imageUrlToPngBlob(url).then((blob) => blob ? {
+                blob, contentType:
+                    'image/png'
+            } : null)
             : await fetchBlobFromUrl(url);
-        if(!resolved) return null;
+        if (!resolved) return null;
 
         const contentType = resolved.contentType || resolved.blob.type || '';
         const ext = getImageExtension(contentType, url);
-        const safeProjectId = projectId.replace(/[^a-zA-Z0-9_-]/g, "_");
-        const dir = `projects/${safeProjectId}`;
+
+        // sanitize projectId to prevent path traversal
+        const idPattern = /^[A-Za-z0-9._-]+$/;
+        if (!idPattern.test(projectId)) {
+            throw new Error(`Invalid projectId for hosting: ${projectId}`);
+        }
+
+        // Use simple string concatenation for POSIX paths (runs in browser, not Node)
+        const dir = `projects/${projectId}`;
         const filePath = `${dir}/${label}.${ext}`;
+
         const uploadFile = new File([resolved.blob], `${label}.${ext}`, {
             type: contentType,
         });
@@ -51,8 +67,8 @@ StoreHostedImageParams): Promise<HostedAsset | null> => {
 
         const hostedUrl = getHostedUrl({ subdomain: hosting.subdomain }, filePath);
 
-        return hostedUrl ? { url: hostedUrl }: null;
-    }catch(e){
+        return hostedUrl ? { url: hostedUrl } : null;
+    } catch (e) {
         console.warn(`Failed to store hosted image: ${e}`);
         return null;
     }
