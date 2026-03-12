@@ -110,10 +110,10 @@ type HostingConfig = { subdomain: string };
 type HostedAsset = { url: string };
 
 interface StoreHostedImageParams {
-    hosting: { subdomain: string } | null;
+    hosting: HostingConfig | null;
     url: string;
     projectId: string;
-    label: string;
+    label: "source" | "rendered";
 }
 
 interface CreateProjectParams {
@@ -125,4 +125,3 @@ interface Generate3DViewParams {
     sourceImage: string;
     projectId?: string | null;
 }
-
