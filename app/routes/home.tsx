@@ -4,11 +4,11 @@ import type { Route } from "./+types/home";
 import Button from "components/ui/Button";
 import Upload from "../../components/Upload";
 import { useNavigate } from "react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as puterAction from "../../lib/puter.action";
 
 
-export function meta({}: Route.MetaArgs) {
+export function meta({ }: Route.MetaArgs) {
   return [
     { title: "New React Router App" },
     { name: "description", content: "Welcome to React Router!" },
@@ -18,37 +18,57 @@ export function meta({}: Route.MetaArgs) {
 export default function Home() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<DesignItem[]>([]);
+  const isCreatingProjectRef = useRef(false);
+
   const handleUploadComplete = async (base64Image: string) => {
-    const newId = Date.now().toString();
-    const name = `Residence ${newId}`;
+    try {
+      if (isCreatingProjectRef.current) return false;
+      isCreatingProjectRef.current = true;
+      const newId = Date.now().toString();
+      const name = `Residence ${newId}`;
 
-    const newItem = {
-      id: newId, name, sourceImage: base64Image, renderedImage: undefined,
-      timestamp: Date.now()
-    }
-
-    const saved = await puterAction.createProject({ item: newItem, visibility: 'private' });
-
-    if(!saved) {
-      console.error("Failed to create Project");
-      return false;
-    }
-
-    setProjects((prev) => [newItem, ...prev]);
-
-    navigate(`/visualizer/${newId}`, {
-      state: {
-        initialImage: saved.sourceImage,
-        initialRender: saved.renderedImage || null,
-        name
+      const newItem = {
+        id: newId, name, sourceImage: base64Image, renderedImage: undefined,
+        timestamp: Date.now()
       }
-    });
 
-    return true;
+      const saved = await puterAction.createProject({ item: newItem, visibility: 'private' });
+
+      if (!saved) {
+        console.error("Failed to create Project");
+        return false;
+      }
+
+      setProjects((prev) => [newItem, ...prev]);
+
+      navigate(`/visualizer/${newId}`, {
+        state: {
+          initialImage: saved.sourceImage,
+          initialRender: saved.renderedImage || null,
+          name
+        }
+      });
+
+      return true;
+    } finally {
+      isCreatingProjectRef.current = false;
+    }
   }
 
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const items = await puterAction.getProjects();
+        setProjects(items);
+      } catch (e) {
+        console.error("Failed to get projects", e);
+      }
+    }
+    fetchProjects();
+  }, []);
+
   return (
-    <div className = "home">
+    <div className="home">
       <Navbar />
 
       <section className="hero">
@@ -72,17 +92,17 @@ export default function Home() {
         </div>
         <div id="upload" className="upload-shell">
           <div className="grid-overlay" />
-            <div className="upload-card">
-              <div className="upload-head">
-                <div className="upload-icon">
-                  <Layers className="icon"/>
-                </div>
-                <h3>Upload your floor plan</h3>
-                <p>Supports JPG, PNG, formats upto 10MB</p>
+          <div className="upload-card">
+            <div className="upload-head">
+              <div className="upload-icon">
+                <Layers className="icon" />
               </div>
-
-              <Upload onComplete={handleUploadComplete}/>
+              <h3>Upload your floor plan</h3>
+              <p>Supports JPG, PNG, formats upto 10MB</p>
             </div>
+
+            <Upload onComplete={handleUploadComplete} />
+          </div>
         </div>
       </section>
 
@@ -97,7 +117,7 @@ export default function Home() {
 
           <div className="projects-grid">
             {projects.map(({ id, name, renderedImage, sourceImage, timestamp }) => (
-              <div key={id} className="project-card group">
+              <div key={id} className="project-card group" onClick={() => navigate(`/visualizer/${id}`)}>
                 <div className="preview">
                   <img
                     src={renderedImage || sourceImage}
